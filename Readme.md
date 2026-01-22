@@ -1,5 +1,13 @@
 # Embedded WebDAV file server for a local folder
 
+NOTE: Foconis Release
+- Update Version in gradle.properties (remove '-SNAPSHOT' suffix)
+- run Build: `./gradlew clean build`
+- run Publish: `./gradlew publish` (publishes to Archiva - needs credentials in ~/.m2/settings.xml)
+- Commit and tag version
+- Update version in gradle.properties (increment version and add '-SNAPSHOT' suffix)
+- Commit
+
 ## Abstract
 This project contains a _very_ basic WebDAV server that will serve the contents of a single local folder. The only parameters for the server are:
 
