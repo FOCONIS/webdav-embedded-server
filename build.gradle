@@ -113,20 +113,15 @@ wrapper {
 
 publishing {
     repositories {
+        var settingsXml = new groovy.xml.XmlParser().parse(System.getenv("HOME") + "/.m2/settings.xml")
+        var servers = settingsXml.servers[0].server
+        var foconisRelease = servers.find({ it.id.text() == "foconis-release" })
         maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/atetzner/webdav-embedded-server")
+            name = "foconis-release"
+            url = uri("https://mvnrepo.foconis.de/repository/maven-releases/")
             credentials {
-                username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_REPOSITORY_OWNER")
-                password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
-            }
-        }
-        maven {
-            name = "MavenCentral"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = project.findProperty("mvncentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
-                password = project.findProperty("mvncentral.key") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
+                username = foconisRelease.username.text()
+                password = foconisRelease.password.text()
             }
         }
     }
@@ -154,21 +149,11 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:https://github.com/atetzner/webdav-embedded-server.git'
-                    developerConnection = 'scm:git://github.com:atetzner/webdav-embedded-server.git'
-                    url = 'https://github.com/atetzner/webdav-embedded-server'
+                    connection = 'scm:https://github.com/FOCONIS/webdav-embedded-server.git'
+                    developerConnection = 'scm:git://github.com:FOCONIS/webdav-embedded-server.git'
+                    url = 'https://github.com/FOCONIS/webdav-embedded-server'
                 }
             }
         }
     }
-}
-
-signing {
-    def signingKey = findProperty("signingKey")
-    def signingPassword = findProperty("signingPassword")
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    required { gradle.taskGraph.hasTask("publish") }
-    sign publishing.publications.mavenJava
-    sign configurations.archives
 }
