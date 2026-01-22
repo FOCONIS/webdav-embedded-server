@@ -26,6 +26,8 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,7 +38,7 @@ import static org.apache.commons.lang3.Validate.*;
  */
 public class MiltonWebDAVFileServer {
 
-    private final File rootFolder;
+    private final Path rootFolder;
     private Server jettyServer = null;
     private ServerConnector connector = null;
     private int port = 8081;
@@ -45,9 +47,9 @@ public class MiltonWebDAVFileServer {
     /**
      * @param rootFolder The folder that will be served by the created WebDAV server
      */
-    public MiltonWebDAVFileServer(File rootFolder) {
+    public MiltonWebDAVFileServer(Path rootFolder) {
         notNull(rootFolder, "'rootFolder' may not be null");
-        if (!rootFolder.isDirectory()) {
+        if (!Files.isDirectory(rootFolder)) {
             throw new IllegalArgumentException("Given 'rootFolder' is not a directory");
         }
 

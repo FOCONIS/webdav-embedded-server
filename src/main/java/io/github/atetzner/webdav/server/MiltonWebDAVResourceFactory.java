@@ -30,6 +30,8 @@ import io.milton.http.fs.SimpleSecurityManager;
 import io.milton.resource.Resource;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static org.apache.commons.lang3.Validate.*;
@@ -40,7 +42,7 @@ import static org.apache.commons.lang3.Validate.*;
  * LockManager}.
  */
 public class MiltonWebDAVResourceFactory implements ResourceFactory {
-    private final File rootFolder;
+    private final Path rootFolder;
     private final SecurityManager securityManager;
     private final LockManager lockManager;
 
@@ -50,10 +52,10 @@ public class MiltonWebDAVResourceFactory implements ResourceFactory {
      *                    authenticate at the server. If {@code null} or an {@link Map#isEmpty() empty map} is given,
      *                    authentication is disabled.
      */
-    public MiltonWebDAVResourceFactory(File rootFolder, Map<String, String> credentials) {
+    public MiltonWebDAVResourceFactory(Path rootFolder, Map<String, String> credentials) {
         notNull(rootFolder, "'rootFolder' may not be null");
 
-        if (!rootFolder.exists() || !rootFolder.isDirectory()) {
+        if (!Files.exists(rootFolder) || !Files.isDirectory(rootFolder)) {
             throw new IllegalArgumentException("Root folder does not exist or is not a folder");
         }
 
@@ -71,17 +73,17 @@ public class MiltonWebDAVResourceFactory implements ResourceFactory {
 
     @Override
     public Resource getResource(String host, String path) throws NotAuthorizedException, BadRequestException {
-        File fileToServe = new File(rootFolder, path);
-        if (!fileToServe.exists()) {
+        Path fileToServe = rootFolder.resolve(path.replaceFirst("^/", ""));
+        if (!Files.exists(fileToServe)) {
             return null;
-        } else if (fileToServe.isDirectory()) {
+        } else if (Files.isDirectory(fileToServe)) {
             return new MiltonFolderResource(fileToServe, this);
         } else {
             return new MiltonFileResource(fileToServe, this);
         }
     }
 
-    public File getRootFolder() {
+    public Path getRootFolder() {
         return rootFolder;
     }
 

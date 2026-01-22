@@ -22,6 +22,8 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Main class to start a {@link MiltonWebDAVFileServer} from the command line; for command line options of the server
@@ -55,7 +57,7 @@ public class MiltonStandaloneServer {
             System.exit(1);
         }
 
-        File rootFolder = new File(cmdLineArgs.getRootFolder().get(0));
+        Path rootFolder = Paths.get(cmdLineArgs.getRootFolder().get(0));
         MiltonWebDAVFileServer server = new MiltonWebDAVFileServer(rootFolder);
         server.setPort(cmdLineArgs.getPort());
         server.getUserCredentials().putAll(cmdLineArgs.getParsedUserCredentials());

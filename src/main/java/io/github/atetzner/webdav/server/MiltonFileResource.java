@@ -60,22 +60,22 @@ import java.util.Map;
 public class MiltonFileResource implements FileResource, ReplaceableResource, LockableResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MiltonFileResource.class);
-    private final File file;
+    private final Path file;
     private final MiltonWebDAVResourceFactory resourceFactory;
 
-    public MiltonFileResource(File file, MiltonWebDAVResourceFactory resourceFactory) {
+    public MiltonFileResource(Path file, MiltonWebDAVResourceFactory resourceFactory) {
         this.file = file;
         this.resourceFactory = resourceFactory;
     }
 
     @Override
     public String getUniqueId() {
-        return file.getAbsolutePath();
+        return file.toAbsolutePath().toString();
     }
 
     @Override
     public String getName() {
-        return file.getName();
+        return file.getFileName().toString();
     }
 
     @Override
@@ -100,12 +100,12 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
 
     @Override
     public String getRealm() {
-        return file.getAbsolutePath();
+        return file.toAbsolutePath().toString();
     }
 
     @Override
     public Date getModifiedDate() {
-        return new Date(file.lastModified());
+        return new Date(file.toFile().lastModified());
     }
 
     @Override
@@ -119,11 +119,11 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
             ConflictException {
         LOGGER.debug("Copying {} to {}/{}", this.file, toCollection.getName(), name);
 
-        File copyFilePath = new File(resourceFactory.getRootFolder(), toCollection.getName());
-        File copyFile = new File(copyFilePath, name);
+        Path copyFilePath = resourceFactory.getRootFolder().resolve(toCollection.getName());
+        Path copyFile = copyFilePath.resolve(name);
 
         try {
-            FileUtils.copyFile(this.file, copyFile);
+            Files.copy(this.file, copyFile);
         } catch (IOException e) {
             LOGGER.error("Error copying file {} to {}/{}", this.file, toCollection, name, e);
             throw new RuntimeIoException(e);
@@ -133,7 +133,14 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
     @Override
     public void delete() throws NotAuthorizedException, ConflictException, BadRequestException {
         LOGGER.debug("Deleting {}", this.file);
-        if (!this.file.delete()) {
+        boolean deleted;
+        try {
+            deleted = Files.deleteIfExists(this.file);
+        } catch (IOException e) {
+            LOGGER.error("Error deleting {}", this.file, e);
+            deleted = false;
+        }
+        if (!deleted) {
             LOGGER.error("Could not delete file {}", this.file);
             throw new RuntimeIoException("Could no delete file " + file);
         }
@@ -143,8 +150,8 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
     public void sendContent(OutputStream out, Range range, Map<String, String> params, String contentType) throws
             IOException, NotAuthorizedException, BadRequestException, NotFoundException {
         LOGGER.debug("Sending contents for {}", this.file);
-        if (!this.file.isDirectory()) {
-            FileUtils.copyFile(this.file, out);
+        if (!Files.isDirectory(this.file)) {
+            Files.copy(this.file, out);
         }
     }
 
@@ -155,7 +162,7 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
 
     @Override
     public String getContentType(String accepts) {
-        String mime = ContentTypeUtils.findContentTypes(this.file);
+        String mime = ContentTypeUtils.findContentTypes(this.file.getFileName().toString());
         String contentType = ContentTypeUtils.findAcceptableContentType(mime, accepts);
 
         LOGGER.debug("Resolved content-type {} for {}", contentType, this.file);
@@ -166,8 +173,13 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
 
     @Override
     public Long getContentLength() {
-        return this.file.length();
-    }
+		try {
+			return Files.size(this.file);
+		} catch (IOException e) {
+            LOGGER.error("Error reading size for {}", this.file, e);
+            return null;
+		}
+	}
 
     @Override
     public LockResult lock(LockTimeout timeout, LockInfo lockInfo) throws NotAuthorizedException,
@@ -198,11 +210,11 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
             BadRequestException {
         LOGGER.debug("Moving {} to {}/{}", this.file, rDest.getName(), name);
 
-        File copyFilePath = new File(resourceFactory.getRootFolder(), rDest.getName());
-        File copyFile = new File(copyFilePath, name);
+        Path copyFilePath = resourceFactory.getRootFolder().resolve(rDest.getName());
+        Path copyFile = copyFilePath.resolve(name);
 
         try {
-            FileUtils.moveFile(this.file, copyFile);
+            Files.move(this.file, copyFile);
         } catch (IOException e) {
             LOGGER.error("Error moving file {} to {}/{}", this.file, rDest, name, e);
             throw new RuntimeIoException(e);
@@ -211,9 +223,8 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
 
     @Override
     public Date getCreateDate() {
-        Path filePath = Paths.get(this.file.toURI());
         try {
-            BasicFileAttributes attr = Files.readAttributes(filePath, BasicFileAttributes.class);
+            BasicFileAttributes attr = Files.readAttributes(this.file, BasicFileAttributes.class);
             long creationTimeMillis = attr.creationTime().toMillis();
             return new Date(creationTimeMillis);
         } catch (IOException e) {
@@ -228,20 +239,10 @@ public class MiltonFileResource implements FileResource, ReplaceableResource, Lo
             NotAuthorizedException {
         LOGGER.debug("Replacing content of {}", this.file);
 
-        OutputStream out = null;
-        try {
-            out = FileUtils.openOutputStream(this.file);
-            IOUtils.copy(in, out);
+        try (OutputStream os = Files.newOutputStream(this.file)) {
+            IOUtils.copy(in, os);
         } catch (IOException e) {
             throw new RuntimeIoException(e);
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    LOGGER.error("Error closing output stream to {}", this.file, e);
-                }
-            }
         }
     }
 
