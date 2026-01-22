@@ -118,7 +118,7 @@ publishing {
         var foconisRelease = servers.find({ it.id.text() == "foconis-release" })
         maven {
             name = "foconis-release"
-            url = uri("https://mvnrepo.foconis.de/repository/maven-releases/")
+            url = uri("https://mvnrepo.foconis.de/repository/release/")
             credentials {
                 username = foconisRelease.username.text()
                 password = foconisRelease.password.text()
